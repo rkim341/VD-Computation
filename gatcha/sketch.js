@@ -28,5 +28,5 @@ function draw() {
   background("skyblue");
   image(body, 0, 0);
   image(face, 155.5, 125.5);
-
+//i guess ill change smth
 }
