@@ -47,11 +47,37 @@ function windowResized() {
   redrawArtwork();
 }
 
+/**
+ * UPDATED: Creates a canvas maintaining the A4 aspect ratio (1:sqrt(2)).
+ */
 function createCanvasForLayout() {
-  // Keep some breathing room at bottom for buttons
-  const w = Math.min(windowWidth * 0.96, 1200);
-  const h = Math.min(windowHeight * 0.70, 700);
+  // A4 ratio: 1 : sqrt(2) ≈ 1 : 1.414
+  const A4_W_TO_H_RATIO = 1 / Math.sqrt(2); // ≈ 0.707
+
+  // Calculate maximum available space (leaving room at the bottom for controls)
+  const maxW = windowWidth * 0.96;
+  const maxH = windowHeight * 0.70;
+
+  let w, h;
+
+  // 1. Determine size based on fitting within the height limit (maxH)
+  h = maxH;
+  w = h * A4_W_TO_H_RATIO;
+
+  // 2. If the calculated width (w) exceeds the width limit (maxW),
+  //    recalculate based on the width limit
+  if (w > maxW) {
+    w = maxW;
+    h = w / A4_W_TO_H_RATIO;
+  }
+
+  // Ensure minimum size for visibility
+  w = max(w, 200);
+  h = max(h, 200);
+
+  // Set the canvas size
   const c = createCanvas(w, h);
+  
   // Anchor the canvas at top-center
   c.parent(document.body);
   c.style("display", "block");
@@ -69,7 +95,7 @@ function draw() {
 
 // ---------------- UI ----------------
 function buildControls() {
-  // Wrapper
+  // Wrapper (kept dark for contrast with new light buttons)
   ui.wrap = createDiv();
   ui.wrap.id("controls");
   ui.wrap.style("position", "fixed");
@@ -95,6 +121,7 @@ function buildControls() {
     chip.style(commonChipStyle());
     chip.style("gap", "8px");
     chip.mousePressed(() => toggleColor(c.hex, chip));
+    
     // swatch
     const sw = createSpan(" ");
     sw.parent(chip);
@@ -102,9 +129,11 @@ function buildControls() {
     sw.style("width", "18px");
     sw.style("height", "18px");
     sw.style("borderRadius", "50%");
-    sw.style("border", "1px solid rgba(255,255,255,0.6)");
+    // UPDATED: Dark border for swatch to show on light button background
+    sw.style("border", "1px solid rgba(0,0,0,0.4)"); 
     sw.style("boxShadow", "inset 0 0 0 1px rgba(0,0,0,.25)");
     sw.style("background", c.hex);
+    
     // move text to the right of swatch
     chip.html(sw.elt.outerHTML + " " + c.label);
     chip.parent(ui.wrap);
@@ -145,19 +174,24 @@ function positionControls() {
   // nothing dynamic needed beyond fixed bottom; keep function in case you want to nudge
 }
 
+/**
+ * UPDATED: Common style for light gray, unselected chips.
+ */
 function commonChipStyle() {
   return {
-    background: "#1b1d20",
-    color: "#f5f7fa",
-    border: "1px solid #2a2d31",
+    background: "#f0f0f0", // Light gray background
+    color: "#333333",      // Dark text
+    border: "1px solid #cccccc", // Neutral border
     borderRadius: "999px",
     padding: "8px 12px",
-    boxShadow: "0 4px 12px rgba(0,0,0,.25)",
+    boxShadow: "0 2px 6px rgba(0,0,0,.15)", // Subtler shadow
     fontSize: "14px",
     cursor: "pointer",
+    transition: "outline 0.1s ease-out", // Smooth outline transition
   };
 }
 
+// Icon buttons are kept dark for contrast
 function styleIconBtn(btn) {
   btn.style("width", "40px");
   btn.style("height", "40px");
@@ -170,9 +204,15 @@ function styleIconBtn(btn) {
   btn.style("cursor", "pointer");
 }
 
-// Toggle selection (max 3)
+/**
+ * UPDATED: Toggle selection (max 3) and use the color's HEX for the outline.
+ */
 function toggleColor(hex, btn) {
+  // Define the outline style: 2px solid + the color's HEX
+  const selectedOutline = `2px solid ${hex}`;
+
   if (selectedColors.has(hex)) {
+    // Deselect: remove from set and clear outline
     selectedColors.delete(hex);
     btn.style("outline", "none");
   } else {
@@ -184,8 +224,9 @@ function toggleColor(hex, btn) {
       );
       return;
     }
+    // Select: add to set and apply the colored outline
     selectedColors.add(hex);
-    btn.style("outline", "2px solid #ffffff");
+    btn.style("outline", selectedOutline);
   }
   shuffleArtwork(); // update immediately
 }
@@ -247,7 +288,7 @@ function drawImageComposition(img) {
     const c = color(cols[i % cols.length] || "#222");
     c.setAlpha(35);
     fill(c);
-    rect(margin * (i + 1), margin * (i + 1), width - margin * (i + 2), height - margin * (i + 2), 24);
+    rect(margin * (i + 1), margin * (i + 1), width - margin * (i + 2), height - margin * (i * 2), 24);
   }
   pop();
 
@@ -299,7 +340,7 @@ function drawGenerativeComposition() {
     endShape();
   }
 
-  // Subtle frame
+  // Subtle frame (You can comment this out if you want a borderless print)
   noFill();
   stroke(255, 25);
   rect(8, 8, width - 16, height - 16, 16);
